@@ -1,21 +1,95 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+from datetime import datetime
+import re
 
-db = SQLAlchemy() #connection between python and database
-bcrypt = Bcrypt() #used to hash and verify passwords
+db = SQLAlchemy()  # connection between python and database
+bcrypt = Bcrypt()  # used to hash and verify passwords
 
+# Email validation regex
+EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 
-#creates a database table called user
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key = True)  
-    email = db.Column(db.String(150), unique = True, nullable = False)
-    password_hash = db.Column(db.String(150), nullable = False)
+    """User model with enhanced validation and security"""
+    
+    id = db.Column(db.Integer, primary_key=True)  
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(150), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+    def __init__(self, username, email, password):
+        """Initialize user with validation"""
+        self.username = self.validate_username(username)
+        self.email = self.validate_email(email)
+        self.set_password(password)
+
+    @staticmethod
+    def validate_username(username):
+        """Validate username format"""
+        if not username or len(username) < 3:
+            raise ValueError("Username must be at least 3 characters long")
+        if len(username) > 80:
+            raise ValueError("Username must be less than 80 characters")
+        if not username.replace('_', '').replace('-', '').isalnum():
+            raise ValueError("Username can only contain letters, numbers, hyphens, and underscores")
+        return username.lower()
+
+    @staticmethod
+    def validate_email(email):
+        """Validate email format"""
+        if not email:
+            raise ValueError("Email is required")
+        if not EMAIL_REGEX.match(email):
+            raise ValueError("Invalid email format")
+        return email.lower()
 
     def set_password(self, password):
+        """Hash and set password with validation"""
+        if not password:
+            raise ValueError("Password is required")
+        if len(password) < 6:
+            raise ValueError("Password must be at least 6 characters long")
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
     
     def check_password(self, password):
+        """Verify password against hash"""
         return bcrypt.check_password_hash(self.password_hash, password)
+    
+    def to_dict(self, include_sensitive=False):
+        """Convert user to dictionary for JSON responses"""
+        user_dict = {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'is_active': self.is_active
+        }
+        
+        if include_sensitive:
+            # Only include sensitive data when explicitly requested
+            user_dict['password_hash'] = self.password_hash
+            
+        return user_dict
+
+    @classmethod
+    def find_by_email(cls, email):
+        """Find user by email"""
+        return cls.query.filter_by(email=email.lower()).first()
+    
+    @classmethod
+    def find_by_username(cls, username):
+        """Find user by username"""
+        return cls.query.filter_by(username=username.lower()).first()
+    
+    @classmethod
+    def find_by_id(cls, user_id):
+        """Find user by ID"""
+        return cls.query.get(user_id)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
     
 
 
