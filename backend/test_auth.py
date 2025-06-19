@@ -1,7 +1,7 @@
 import unittest
 import os
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Flask
 from models import db, User
 from auth_utils import generate_jwt, decode_jwt, token_required, JWTManager
@@ -57,11 +57,9 @@ class TestJWTAuth(unittest.TestCase):
         token = generate_jwt(payload, expires_in_minutes=30)
         
         decoded = decode_jwt(token)
-        self.assertIsNotNone(decoded)
-        
-        # Check expiration is approximately 30 minutes from now
-        exp_time = datetime.utcfromtimestamp(decoded['exp'])
-        expected_time = datetime.utcnow() + timedelta(minutes=30)
+        self.assertIsNotNone(decoded)        # Check expiration is approximately 30 minutes from now
+        exp_time = datetime.fromtimestamp(decoded['exp'], timezone.utc)
+        expected_time = datetime.now(timezone.utc) + timedelta(minutes=30)
         time_diff = abs((exp_time - expected_time).total_seconds())
         
         # Allow 5 seconds tolerance for test execution time

@@ -1,6 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
-from datetime import datetime
+from datetime import datetime, timezone
 import re
 
 db = SQLAlchemy()  # connection between python and database
@@ -16,7 +16,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(150), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
 
     def __init__(self, username, email, password):
@@ -24,6 +24,7 @@ class User(db.Model):
         self.username = self.validate_username(username)
         self.email = self.validate_email(email)
         self.set_password(password)
+        self.is_active = True  # Set default active status
 
     @staticmethod
     def validate_username(username):
@@ -86,7 +87,7 @@ class User(db.Model):
     @classmethod
     def find_by_id(cls, user_id):
         """Find user by ID"""
-        return cls.query.get(user_id)
+        return db.session.get(cls, user_id)
 
     def __repr__(self):
         return f'<User {self.username}>'

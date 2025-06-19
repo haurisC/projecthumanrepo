@@ -28,7 +28,7 @@ def generate_jwt(payload: dict, expires_in_minutes: int = 15) -> str:
         str: Encoded JWT token
     """
     payload_copy = payload.copy()
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(dt.timezone.utc)
     payload_copy.update({
         "iat": now,  # Issued at
         "exp": now + dt.timedelta(minutes=expires_in_minutes),  # Expiration

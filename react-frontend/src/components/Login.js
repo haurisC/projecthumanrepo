@@ -297,7 +297,7 @@ const Login = () => {
       {isLoginMode && (
         <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
           <div style={{ fontSize: '14px', color: '#666' }}>
-            <strong>Demo credentials:</strong><br />
+            <strong>Demo credentials to be addeed later, NOT implemented as there is NO api endpoints yet:</strong><br />
             Email: demo@projecthuman.com<br />
             Password: demo123
           </div>
