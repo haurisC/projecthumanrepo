@@ -1,12 +1,12 @@
 import React from 'react';
 
-const Register = () => {
+const Logout = () => {
   return (
     <div>
-      <h1>Register Page</h1>
+      <h1>Logout Page</h1>
       {/* Add Content Here */}
     </div>
   );
 };
 
-export default Register;
+export default Logout;
