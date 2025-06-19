@@ -1,0 +1,10 @@
+/* src/styles/tailwind.css */
+
+/* Import base styles (predefined styles from Tailwind) */
+@tailwind base;
+
+/* Import utility classes */
+@tailwind components;
+
+/* Import Tailwind’s utility-first classes */
+@tailwind utilities;
