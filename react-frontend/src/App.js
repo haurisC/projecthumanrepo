@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Login from './components/Login';
 import Logout from './components/Logout';
+import AppRoutes from './AppRoutes';
 
 // Tailwind class constants
 const appClass = "text-center min-h-screen bg-gradient-to-br from-indigo-400 to-purple-600";
@@ -46,8 +47,7 @@ function AppContent() {
       .then(response => {
         setMessage(response.data.message);
       })
-      .catch(error => {
-        console.error('Error fetching message:', error);
+      .catch(() => {
         setMessage('Unable to connect to backend');
       });
   }, [apiClient]);
@@ -59,9 +59,7 @@ function AppContent() {
         .then(response => {
           setProtectedData(response.data);
         })
-        .catch(error => {
-          console.error('Error fetching protected data:', error);
-        });
+        .catch(() => {});
     } else {
       setProtectedData(null);
     }
@@ -80,6 +78,31 @@ function AppContent() {
     );
   }
 
+  // Collect dashboard props in one object for easy passing
+  const dashboardProps = {
+    user,
+    protectedData,
+    statusActiveClass,
+    statusInactiveClass,
+    dashboardClass,
+    welcomeSectionClass,
+    welcomeSectionH2Class,
+    userInfoClass,
+    userInfoPClass,
+    protectedSectionClass,
+    protectedSectionH3Class,
+    protectedDataClass,
+    apiUserInfoClass,
+    apiUserInfoH4Class,
+    apiUserInfoPreClass,
+    actionsSectionClass,
+    actionsSectionH3Class,
+    actionButtonsClass,
+    actionBtnPrimaryClass,
+    actionBtnSecondaryClass,
+    apiClient
+  };
+
   return (
     <div className={appClass}>
       <header className={appHeaderClass}>
@@ -93,69 +116,7 @@ function AppContent() {
           )}
         </div>
         <main className={mainContentClass}>
-          {!isAuthenticated ? (
-            <Login />
-          ) : (
-            <div className={dashboardClass}>
-              <div className={welcomeSectionClass}>
-                <h2 className={welcomeSectionH2Class}>Welcome back, {user?.username}! 👋</h2>
-                <div className={userInfoClass}>
-                  <p className={userInfoPClass}><strong>Email:</strong> {user?.email}</p>
-                  <p className={userInfoPClass}><strong>Account created:</strong> {
-                    user?.created_at
-                      ? new Date(user.created_at).toLocaleDateString()
-                      : 'N/A'
-                  }</p>
-                  <p className={userInfoPClass}><strong>Status:</strong>
-                    <span className={user?.is_active ? statusActiveClass : statusInactiveClass}>
-                      {user?.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              {protectedData && (
-                <div className={protectedSectionClass}>
-                  <h3 className={protectedSectionH3Class}>Protected Content</h3>
-                  <div className={protectedDataClass}>
-                    <p>{protectedData.message}</p>
-                    {protectedData.user && (
-                      <div className={apiUserInfoClass}>
-                        <h4 className={apiUserInfoH4Class}>API User Info:</h4>
-                        <pre className={apiUserInfoPreClass}>{JSON.stringify(protectedData.user, null, 2)}</pre>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className={actionsSectionClass}>
-                <h3 className={actionsSectionH3Class}>Quick Actions</h3>
-                <div className={actionButtonsClass}>
-                  <button
-                    className={actionBtnPrimaryClass}
-                    onClick={() => window.location.reload()}
-                  >
-                    Refresh Data
-                  </button>
-                  <button
-                    className={actionBtnSecondaryClass}
-                    onClick={() => {
-                      apiClient.get('/api/auth/me')
-                        .then(response => {
-                          alert('Profile synced successfully!');
-                        })
-                        .catch(error => {
-                          alert('Failed to sync profile');
-                        });
-                    }}
-                  >
-                    Sync Profile
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <AppRoutes dashboardProps={dashboardProps} />
         </main>
       </header>
     </div>
@@ -166,7 +127,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </AuthProvider>
   );
 }
