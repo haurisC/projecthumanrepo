@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from models import db, User, PasswordResetToken
 from auth_utils import generate_jwt, decode_jwt, token_required
 import traceback
+import secrets
+
 
 # Load environment variables
 load_dotenv()
@@ -76,14 +78,21 @@ def register():
         # Create new user
         try:
             user = User(username=username, email=email, password=password)
+
+            #generatees the secret token for the user to verify email.
+            emailtoken = secrets.token_urlsafe(32)
+            user.email.verification_token = emailtoken
+            user.is_verified = False
             db.session.add(user)
             db.session.commit()
             
+            #this is the code to verify the accoutn
+            print(f"[DEV] Verify this account: http://localhost:3000/verify-email?token={token}")
             # Generate JWT token
             token = generate_jwt({'user_id': user.id, 'username': user.username}, expires_in_minutes=60)
             
             return jsonify({
-                'message': 'User registered successfully',
+                'message': 'User registered successfully. Please verify your email',
                 'token': token,
                 'user': user.to_dict()
             }), 201
@@ -277,7 +286,21 @@ def reset_password():
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Password reset failed'}), 500
+#this is the code to verify the email token
+@app.route('/api/auth/verify-email', methods=['GET'])
+def verify_email():
+    token = request.args.get('token', '')
+    if not token:
+        return jsonify({'error': 'Missing token'}), 400
 
+    user = User.query.filter_by(email_verification_token=token).first()
+    if not user:
+        return jsonify({'error': 'Invalid or expired token'}), 400
+
+    user.is_verified = True
+    user.email_verification_token = None
+    db.session.commit()
+    return jsonify({'message': 'Email verified successfully!'}), 200
 
 # Error handlers
 @app.errorhandler(404)

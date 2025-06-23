@@ -19,6 +19,8 @@ class User(db.Model):
     password_hash = db.Column(db.String(150), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
+    is_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(64), nullable=True)
 
     def __init__(self, username, email, password):
         """Initialize user with validation"""
