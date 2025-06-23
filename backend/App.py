@@ -3,7 +3,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 import os
 from dotenv import load_dotenv
-from models import db, User
+from models import db, User, PasswordResetToken
 from auth_utils import generate_jwt, decode_jwt, token_required
 import traceback
 
@@ -25,6 +25,7 @@ cors = CORS(app, origins=os.getenv('CORS_ORIGINS', 'http://localhost:3000').spli
 # Create database tables
 with app.app_context():
     db.create_all()
+    PasswordResetToken.cleanup_expired()
 
 # Routes
 @app.route('/')
@@ -187,6 +188,96 @@ def protected_route(current_user_id):
         'message': 'This is a protected route',
         'user': user.to_dict() if user else None
     })
+
+
+@app.route('/api/auth/request-password-reset', methods=['POST'])
+def request_password_reset():
+    """Request a password reset token for a user account.
+    
+    Expected JSON args: {"email": "user@example.com"}
+    Returns: JSON response with success message (200) or error (400/500)
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        email = data.get('email', '').strip()
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        # Find user by email
+        user = User.find_by_email(email)
+        if not user or not user.is_active:
+            # Return generic message to prevent email enumeration
+            return jsonify({'message': 'If an account with that email exists, a password reset link has been sent.'}), 200
+        
+        # Clean up existing unused tokens for this user
+        existing_tokens = PasswordResetToken.query.filter_by(user_id=user.id, used=False).all()
+        for token in existing_tokens:
+            db.session.delete(token)
+        
+        # Create new password reset token
+        reset_token = PasswordResetToken(user_id=user.id)
+        db.session.add(reset_token)
+        db.session.commit()
+        
+        # TODO: Replace with actual email sending in production
+        # For development: token is logged (remove in production)
+        if app.debug:
+            print(f"[DEV] Reset token for {email}: {reset_token.token}")
+        # In production, this would send an email instead
+        
+        return jsonify({'message': 'If an account with that email exists, a password reset link has been sent.'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Request failed'}), 500
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """Reset a user's password using a valid reset token.
+    
+    Expected JSON payload: {"token": "reset_token", "password": "new_password"}
+    Returns: JSON response with success message (200) or error (400/500)
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        token = data.get('token', '').strip()
+        new_password = data.get('password', '')
+        
+        if not token or not new_password:
+            return jsonify({'error': 'Token and password are required'}), 400
+        
+        # Find and validate the reset token
+        reset_token = PasswordResetToken.find_by_token(token)
+        if not reset_token or not reset_token.is_valid():
+            return jsonify({'error': 'Invalid or expired token'}), 400
+        
+        # Verify the user account is still valid
+        user = User.find_by_id(reset_token.user_id)
+        if not user or not user.is_active:
+            return jsonify({'error': 'Invalid token'}), 400
+        
+        try:
+            # Update user password and mark token as used
+            user.set_password(new_password)
+            reset_token.mark_as_used()
+            db.session.commit()
+            return jsonify({'message': 'Password reset successfully'}), 200
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Password reset error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Password reset failed'}), 500
+
 
 # Error handlers
 @app.errorhandler(404)
