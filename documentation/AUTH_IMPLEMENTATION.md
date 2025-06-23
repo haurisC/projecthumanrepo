@@ -61,6 +61,8 @@ def token_required(f)  # Decorator for protected routes
 - `password_hash`: Securely hashed password
 - `created_at`: Account creation timestamp
 - `is_active`: Account status
+  `is_verified` : This is the database column for email verification.
+  `email_verification_token`: This is the token database storage 
 
 **Validation Rules:**
 - Username: 3-80 characters, alphanumeric + hyphens/underscores
@@ -74,6 +76,7 @@ def token_required(f)  # Decorator for protected routes
 - `POST /api/auth/login` - User login
 - `GET /api/auth/me` - Get current user info
 - `POST /api/auth/logout` - User logout
+- `GET /api/auth/verify-email` - User email verification
 
 **Protected Endpoints:**
 - `GET /api/protected` - Example protected route
