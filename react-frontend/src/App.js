@@ -1,8 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import './App.css';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Login from './components/Login';
 import Logout from './components/Logout';
+import AppRoutes from './AppRoutes';
+
+// Tailwind class constants
+const appClass = "text-center min-h-screen bg-gradient-to-br from-indigo-400 to-purple-600";
+const appHeaderClass = "bg-white/95 p-5 text-gray-800 min-h-screen flex flex-col items-center justify-start shadow-lg";
+const headerContentClass = "w-full max-w-6xl flex justify-between items-center mb-8 flex-wrap";
+const headerTitleClass = "m-0 text-[#2c3e50] text-4xl font-bold";
+const subtitleClass = "text-gray-500 text-[1.1rem] my-1.5";
+const userHeaderClass = "flex items-center";
+const mainContentClass = "w-full max-w-6xl flex-1";
+const loadingSpinnerClass = "p-12";
+const loadingTitleClass = "text-blue-500 mb-2";
+const dashboardClass = "grid gap-8 p-5";
+const welcomeSectionClass = "bg-white p-8 rounded-xl shadow-lg text-left text-2xl font-bold";
+const welcomeSectionH2Class = "text-[#2c3e50] mb-5 text-2xl";
+const userInfoClass = "grid gap-2 text-[1.1rem]";
+const userInfoPClass = "m-0 flex items-center gap-2";
+const statusClass = "px-3 py-1 rounded-full text-[0.9rem] font-semibold uppercase";
+const statusActiveClass = `${statusClass} bg-green-100 text-green-800`;
+const statusInactiveClass = `${statusClass} bg-red-100 text-red-800`;
+const protectedSectionClass = "bg-white p-8 rounded-xl shadow-lg text-left";
+const protectedSectionH3Class = "text-[#2c3e50] mb-5 text-xl font-bold";
+const protectedDataClass = "bg-gray-100 p-5 rounded-lg border-l-4 border-blue-400";
+const apiUserInfoClass = "mt-5";
+const apiUserInfoH4Class = "text-[#34495e] mb-2 font-semibold";
+const apiUserInfoPreClass = "bg-[#2c3e50] text-[#ecf0f1] p-4 rounded overflow-x-auto text-[0.9rem] leading-relaxed";
+const actionsSectionClass = "bg-white p-8 rounded-xl shadow-lg text-left";
+const actionsSectionH3Class = "text-[#2c3e50] mb-5 text-xl font-bold";
+const actionButtonsClass = "flex gap-4 flex-wrap";
+const actionBtnClass = "py-3 px-6 border-none rounded-md text-base font-semibold cursor-pointer transition-all duration-300 min-w-[120px]";
+const actionBtnPrimaryClass = `${actionBtnClass} bg-blue-500 text-white hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-lg`;
+const actionBtnSecondaryClass = `${actionBtnClass} bg-gray-400 text-white hover:bg-gray-600 hover:-translate-y-0.5 hover:shadow-lg`;
 
 // Main App Content Component (inside AuthProvider)
 function AppContent() {
@@ -16,8 +47,7 @@ function AppContent() {
       .then(response => {
         setMessage(response.data.message);
       })
-      .catch(error => {
-        console.error('Error fetching message:', error);
+      .catch(() => {
         setMessage('Unable to connect to backend');
       });
   }, [apiClient]);
@@ -29,9 +59,7 @@ function AppContent() {
         .then(response => {
           setProtectedData(response.data);
         })
-        .catch(error => {
-          console.error('Error fetching protected data:', error);
-        });
+        .catch(() => {});
     } else {
       setProtectedData(null);
     }
@@ -39,10 +67,10 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="App">
-        <header className="App-header">
-          <div className="loading-spinner">
-            <h2>Loading...</h2>
+      <div className={appClass}>
+        <header className={appHeaderClass}>
+          <div className={loadingSpinnerClass}>
+            <h2 className={loadingTitleClass}>Loading...</h2>
             <p>Initializing ProjectHuman...</p>
           </div>
         </header>
@@ -50,84 +78,45 @@ function AppContent() {
     );
   }
 
+  // Collect dashboard props in one object for easy passing
+  const dashboardProps = {
+    user,
+    protectedData,
+    statusActiveClass,
+    statusInactiveClass,
+    dashboardClass,
+    welcomeSectionClass,
+    welcomeSectionH2Class,
+    userInfoClass,
+    userInfoPClass,
+    protectedSectionClass,
+    protectedSectionH3Class,
+    protectedDataClass,
+    apiUserInfoClass,
+    apiUserInfoH4Class,
+    apiUserInfoPreClass,
+    actionsSectionClass,
+    actionsSectionH3Class,
+    actionButtonsClass,
+    actionBtnPrimaryClass,
+    actionBtnSecondaryClass,
+    apiClient
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <div className="header-content">
-          <h1>ProjectHuman</h1>
-          <p className="subtitle">{message}</p>
-          
+    <div className={appClass}>
+      <header className={appHeaderClass}>
+        <div className={headerContentClass}>
+          <h1 className={headerTitleClass}>ProjectHuman</h1>
+          <p className={subtitleClass}>{message}</p>
           {isAuthenticated && (
-            <div className="user-header">
+            <div className={userHeaderClass}>
               <Logout />
             </div>
           )}
         </div>
-        
-        <main className="main-content">
-          {!isAuthenticated ? (
-            <Login />
-          ) : (
-            <div className="dashboard">
-              <div className="welcome-section">
-                <h2>Welcome back, {user?.username}! 👋</h2>
-                <div className="user-info">
-                  <p><strong>Email:</strong> {user?.email}</p>
-                  <p><strong>Account created:</strong> {
-                    user?.created_at 
-                      ? new Date(user.created_at).toLocaleDateString() 
-                      : 'N/A'
-                  }</p>
-                  <p><strong>Status:</strong> 
-                    <span className={`status ${user?.is_active ? 'active' : 'inactive'}`}>
-                      {user?.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              {protectedData && (
-                <div className="protected-section">
-                  <h3>Protected Content</h3>
-                  <div className="protected-data">
-                    <p>{protectedData.message}</p>
-                    {protectedData.user && (
-                      <div className="api-user-info">
-                        <h4>API User Info:</h4>
-                        <pre>{JSON.stringify(protectedData.user, null, 2)}</pre>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="actions-section">
-                <h3>Quick Actions</h3>
-                <div className="action-buttons">
-                  <button 
-                    className="action-btn primary"
-                    onClick={() => window.location.reload()}
-                  >
-                    Refresh Data
-                  </button>
-                  <button 
-                    className="action-btn secondary"
-                    onClick={() => {
-                      apiClient.get('/api/auth/me')
-                        .then(response => {
-                          alert('Profile synced successfully!');
-                        })
-                        .catch(error => {
-                          alert('Failed to sync profile');
-                        });
-                    }}
-                  >
-                    Sync Profile
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+        <main className={mainContentClass}>
+          <AppRoutes dashboardProps={dashboardProps} />
         </main>
       </header>
     </div>
@@ -138,7 +127,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </AuthProvider>
   );
 }

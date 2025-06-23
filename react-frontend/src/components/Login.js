@@ -115,164 +115,129 @@ const Login = () => {
     clearError();
   };
 
-  const inputStyle = {
-    width: '100%',
-    padding: '10px',
-    marginTop: '5px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '14px'
-  };
+  const inputStyle = "w-full px-3 py-2 mt-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
 
-  const errorInputStyle = {
-    ...inputStyle,
-    borderColor: '#e74c3c'
-  };
+  const errorInputStyle = inputStyle + " border-red-500";
 
-  const buttonStyle = {
-    width: '100%',
-    padding: '12px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '16px',
-    cursor: isLoading ? 'not-allowed' : 'pointer',
-    marginTop: '10px'
-  };
+  const buttonStyle = `w-full py-3 bg-blue-600 text-white rounded text-base mt-2 
+  hover:bg-blue-700 transition ${
+    isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+  }`;
 
-  const toggleButtonStyle = {
-    background: 'none',
-    border: 'none',
-    color: '#007bff',
-    cursor: 'pointer',
-    textDecoration: 'underline'
-  };
+  const toggleButtonStyle = "bg-transparent border-none text-blue-600 cursor-pointer underline p-0";
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h2>{isLoginMode ? 'Welcome Back' : 'Create Account'}</h2>
-        <p style={{ color: '#666' }}>
-          {isLoginMode 
-            ? 'Sign in to your ProjectHuman account' 
-            : 'Join ProjectHuman today'
-          }
-        </p>
-      </div>
+  <div className="max-w-md mx-auto my-12 p-5 bg-white rounded shadow">
+    <div className="text-center mb-8">
+      <h2 className="text-2xl font-semibold">
+        {isLoginMode ? 'Welcome Back' : 'Create Account'}
+      </h2>
+      <p className="text-gray-600">
+        {isLoginMode
+          ? 'Sign in to your ProjectHuman account'
+          : 'Join ProjectHuman today'
+        }
+      </p>
+    </div>
 
       {error && (
-        <div style={{ 
-          backgroundColor: '#f8d7da', 
-          color: '#721c24', 
-          padding: '10px', 
-          borderRadius: '4px', 
-          marginBottom: '20px' 
-        }}>
+        <div className="bg-red-100 text-red-800 p-2.5 rounded mb-5">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
         {!isLoginMode && (
-          <div style={{ marginBottom: '15px' }}>
-            <label htmlFor="username">Username</label>
+          <div className="mb-4">
+            <label htmlFor="username" className="block font-medium">Username</label>
             <input
               type="text"
               id="username"
               name="username"
               value={formData.username}
               onChange={handleInputChange}
-              style={formErrors.username ? errorInputStyle : inputStyle}
+              className={formErrors.username ? errorInputStyle : inputStyle}
               placeholder="Enter your username"
               disabled={isLoading}
             />
             {formErrors.username && (
-              <span style={{ color: '#e74c3c', fontSize: '12px' }}>
+              <span className="text-red-500 text-xs">
                 {formErrors.username}
               </span>
             )}
           </div>
         )}
 
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="email">Email</label>
+        <div className="mb-4">
+          <label htmlFor="email" className="block font-medium">Email</label>
           <input
             type="email"
             id="email"
             name="email"
             value={formData.email}
             onChange={handleInputChange}
-            style={formErrors.email ? errorInputStyle : inputStyle}
+            className={formErrors.email ? errorInputStyle : inputStyle}
             placeholder="Enter your email"
             disabled={isLoading}
           />
           {formErrors.email && (
-            <span style={{ color: '#e74c3c', fontSize: '12px' }}>
+            <span className="text-red-500 text-xs">
               {formErrors.email}
             </span>
           )}
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="password">Password</label>
-          <div style={{ position: 'relative' }}>
+        <div className="mb-4">
+          <label htmlFor="password" className="block font-medium">Password</label>
+          <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
               id="password"
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              style={formErrors.password ? errorInputStyle : inputStyle}
+              className={formErrors.password ? errorInputStyle : inputStyle}
               placeholder="Enter your password"
               disabled={isLoading}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: 'absolute',
-                right: '10px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer'
-              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-blue-600 text-xs"
               disabled={isLoading}
             >
               {showPassword ? 'Show' : 'Hide'}
             </button>
           </div>
           {formErrors.password && (
-            <span style={{ color: '#e74c3c', fontSize: '12px' }}>
+            <span className="text-red-500 text-xs">
               {formErrors.password}
             </span>
           )}
         </div>
 
         {!isLoginMode && (
-          <div style={{ marginBottom: '15px' }}>
-            <label htmlFor="confirmPassword">Confirm Password</label>
+          <div className="mb-4">
+            <label htmlFor="confirmPassword" className="block font-medium">Confirm Password</label>
             <input
               type={showPassword ? 'text' : 'password'}
               id="confirmPassword"
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              style={formErrors.confirmPassword ? errorInputStyle : inputStyle}
+              className={formErrors.confirmPassword ? errorInputStyle : inputStyle}
               placeholder="Confirm your password"
               disabled={isLoading}
             />
             {formErrors.confirmPassword && (
-              <span style={{ color: '#e74c3c', fontSize: '12px' }}>
+              <span className="text-red-500 text-xs">
                 {formErrors.confirmPassword}
               </span>
             )}
           </div>
         )}
 
-        <button type="submit" style={buttonStyle} disabled={isLoading}>
+        <button type="submit" className={buttonStyle} disabled={isLoading}>
           {isLoading 
             ? (isLoginMode ? 'Signing In...' : 'Creating Account...') 
             : (isLoginMode ? 'Sign In' : 'Create Account')
@@ -280,12 +245,12 @@ const Login = () => {
         </button>
       </form>
 
-      <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        <p style={{ color: '#666' }}>
+      <div className="text-center mt-5">
+        <p className="text-gray-600">
           {isLoginMode ? "Don't have an account? " : "Already have an account? "}
           <button
             type="button"
-            style={toggleButtonStyle}
+            className={toggleButtonStyle}
             onClick={toggleMode}
             disabled={isLoading}
           >
@@ -295,8 +260,8 @@ const Login = () => {
       </div>
 
       {isLoginMode && (
-        <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-          <div style={{ fontSize: '14px', color: '#666' }}>
+        <div className="mt-5 p-4 bg-gray-100 rounded">
+          <div className="text-sm text-gray-600">
             <strong>demo credentials:</strong><br />
             Email: test@test.com<br />
             Password: test123
