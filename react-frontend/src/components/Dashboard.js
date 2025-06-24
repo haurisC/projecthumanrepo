@@ -38,6 +38,11 @@ const Dashboard = ({
             {user?.is_active ? 'Active' : 'Inactive'}
           </span>
         </p>
+        <p className={userInfoPClass}><strong>Email Verified:</strong>
+          <span className={user?.is_verified ? statusActiveClass : statusInactiveClass}>
+            {user?.is_verified ? 'Verified' : 'Not Verified'}
+          </span>
+        </p>
       </div>
     </div>
 
