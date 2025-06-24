@@ -79,17 +79,18 @@ def register():
         try:
             user = User(username=username, email=email, password=password)
 
-            #generatees the secret token for the user to verify email.
+            #generates the secret token for the user to verify email.
             emailtoken = secrets.token_urlsafe(32)
-            user.email.verification_token = emailtoken
+            user.email_verification_token = emailtoken
             user.is_verified = False
             db.session.add(user)
             db.session.commit()
             
-            #this is the code to verify the accoutn
-            print(f"[DEV] Verify this account: http://localhost:3000/verify-email?token={token}")
             # Generate JWT token
             token = generate_jwt({'user_id': user.id, 'username': user.username}, expires_in_minutes=60)
+            
+            #this is the code to verify the account
+            print(f"[DEV] Verify this account: http://localhost:3000/verify-email?token={emailtoken}")
             
             return jsonify({
                 'message': 'User registered successfully. Please verify your email',
@@ -145,11 +146,18 @@ def login():
         # Generate JWT token
         token = generate_jwt({'user_id': user.id, 'username': user.username}, expires_in_minutes=60)
         
-        return jsonify({
+        # Check if email is verified and add warning if not
+        response_data = {
             'message': 'Login successful',
             'token': token,
             'user': user.to_dict()
-        })
+        }
+        
+        if not user.is_verified:
+            response_data['warning'] = 'Please verify your email address'
+            response_data['verification_required'] = True
+        
+        return jsonify(response_data)
         
     except Exception as e:
         return jsonify({
@@ -301,6 +309,44 @@ def verify_email():
     user.email_verification_token = None
     db.session.commit()
     return jsonify({'message': 'Email verified successfully!'}), 200
+
+@app.route('/api/auth/resend-verification', methods=['POST'])
+@token_required
+def resend_verification(current_user_id):
+    """Resend email verification token for current user"""
+    try:
+        user = User.find_by_id(current_user_id)
+        if not user:
+            return jsonify({
+                'error': 'User not found',
+                'message': 'User account no longer exists'
+            }), 404
+        
+        if user.is_verified:
+            return jsonify({
+                'message': 'Email already verified',
+                'verified': True
+            }), 200
+        
+        # Generate new verification token
+        emailtoken = secrets.token_urlsafe(32)
+        user.email_verification_token = emailtoken
+        db.session.commit()
+        
+        # For development: print verification link
+        print(f"[DEV] Verify this account: http://localhost:3000/verify-email?token={emailtoken}")
+        
+        return jsonify({
+            'message': 'Verification email sent. Please check your email.',
+            'verification_required': True
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'error': 'Failed to resend verification',
+            'message': 'An unexpected error occurred'
+        }), 500
 
 # Error handlers
 @app.errorhandler(404)

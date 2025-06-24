@@ -68,7 +68,8 @@ class User(db.Model):
             'username': self.username,
             'email': self.email,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'is_active': self.is_active
+            'is_active': self.is_active,
+            'is_verified': self.is_verified
         }
         
         if include_sensitive:
