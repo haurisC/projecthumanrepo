@@ -109,6 +109,39 @@ def token_required(f)  # Decorator for protected routes
 - `TestJWTAuth`: JWT utility testing
 - `TestUserModel`: User model testing
 
+#### 1.5 Password Reset System (`models.py, App.py`)
+
+Overview:
+Secure token-based password reset functionality allowing users to reset forgotten passwords via email verification.
+
+PasswordResetToken Model:
+-id: Primary key
+-user_id: Foreign key to User model
+-token: Cryptographically secure URL-safe token (32 bytes)
+-created_at: Token creation timestamp
+-expires_at: Token expiration timestamp (expires after 10 minutes)
+-used: Boolean to ensure tokens are single-use
+-user: SQLAlchemy relationship to User model
+
+Security Features:
+-10-minute token expiration
+-Single-use tokens (marked as used after password reset)
+-Secure token generation using secrets.token_urlsafe(32)
+-Email enumeration prevention (same response for valid/invalid emails)
+-Timezone-aware datetime comparisons
+-Automatic cleanup of expired tokens
+
+
+### Password Reset Endpoints ###
+POST /api/auth/request-password-reset - Generate and send reset token
+POST /api/auth/reset-password - Reset password using valid token
+
+### Token Management ###
+-Automatic cleanup of expired tokens on server startup (exists in App.py)
+-Single active token per user (previous tokens are invalidated)
+-Comprehensive validation (expiration, usage, user status)
+-Error handling and logging
+
 ### 2. Frontend Implementation
 
 #### 2.1 AuthContext (`contexts/AuthContext.js`)
@@ -200,6 +233,43 @@ Content-Type: application/json
 {
   "email": "john@example.com",
   "password": "securepassword"
+}
+```
+
+
+
+### Password Reset Request
+```
+POST /api/auth/request-password-reset
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "If an account with that email exists, a password reset link has been sent."
+}
+```
+
+### Password Reset
+```
+POST /api/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "secure_reset_token_string",
+  "password": "newpassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Password reset successfully"
 }
 ```
 
