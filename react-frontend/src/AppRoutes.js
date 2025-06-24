@@ -3,6 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import { useAuth } from './contexts/AuthContext';
+import VerifyEmail from "./components/VerifyEmail";
+
+
 
 const AppRoutes = ({
   dashboardProps // pass all your dashboard class constants and props as one object
@@ -27,8 +30,10 @@ const AppRoutes = ({
             : <Navigate to="/" replace />
         }
       />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       {/* Add more routes here as needed */}
     </Routes>
+    
   );
 };
 
