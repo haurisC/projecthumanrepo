@@ -16,18 +16,26 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)  
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(150), nullable=False)
+    password_hash = db.Column(db.String(150), nullable=True)  # Allow null for OAuth users
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
     is_verified = db.Column(db.Boolean, default=False)
     email_verification_token = db.Column(db.String(64), nullable=True)
+    oauth_provider = db.Column(db.String(50), nullable=True)  # 'google', 'github', etc.
 
-    def __init__(self, username, email, password):
+    def __init__(self, username, email, password=None, oauth_provider=None):
         """Initialize user with validation"""
         self.username = self.validate_username(username)
         self.email = self.validate_email(email)
-        self.set_password(password)
+        self.oauth_provider = oauth_provider
+        
+        if password is not None:
+            self.set_password(password)
+        elif oauth_provider is None:
+            raise ValueError("Password is required for non-OAuth users")
+        
         self.is_active = True  # Set default active status
+        self.is_verified = True if oauth_provider else False  # OAuth users are pre-verified
 
     @staticmethod
     def validate_username(username):
@@ -59,6 +67,8 @@ class User(db.Model):
     
     def check_password(self, password):
         """Verify password against hash"""
+        if not self.password_hash:
+            return False  # OAuth users don't have passwords
         return bcrypt.check_password_hash(self.password_hash, password)
     
     def to_dict(self, include_sensitive=False):
@@ -69,7 +79,8 @@ class User(db.Model):
             'email': self.email,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_active': self.is_active,
-            'is_verified': self.is_verified
+            'is_verified': self.is_verified,
+            'oauth_provider': self.oauth_provider
         }
         
         if include_sensitive:

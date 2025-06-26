@@ -7,7 +7,8 @@ from models import db, User, PasswordResetToken
 from auth_utils import generate_jwt, decode_jwt, token_required
 import traceback
 import secrets
-
+from authlib.integrations.flask_client import OAuth
+from flask import redirect, url_for
 
 # Load environment variables
 load_dotenv()
@@ -23,6 +24,20 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize extensions
 db.init_app(app)
 cors = CORS(app, origins=os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(','))
+
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    access_token_url='https://oauth2.googleapis.com/token',
+    access_token_params=None,
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
+    authorize_params=None,
+    api_base_url='https://www.googleapis.com/oauth2/v1/',
+    userinfo_endpoint='https://openidconnect.googleapis.com/v1/userinfo',
+    client_kwargs={'scope': 'openid email profile'},
+)
 
 # Create database tables
 with app.app_context():
@@ -347,6 +362,31 @@ def resend_verification(current_user_id):
             'error': 'Failed to resend verification',
             'message': 'An unexpected error occurred'
         }), 500
+
+@app.route('/api/auth/google')
+def google_login():
+    redirect_uri = url_for('google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/api/auth/google/callback')
+def google_callback():
+    token = google.authorize_access_token()
+    resp = google.get('userinfo')
+    user_info = resp.json()
+    email = user_info['email']
+    username = user_info.get('name', email.split('@')[0])
+
+    # Find or create user
+    user = User.find_by_email(email)
+    if not user:
+        user = User(username=username, email=email, oauth_provider='google')
+        db.session.add(user)
+        db.session.commit()
+
+    # Generate JWT
+    jwt_token = generate_jwt({'user_id': user.id, 'username': user.username}, expires_in_minutes=60)
+    # Redirect to frontend with token
+    return redirect(f'http://localhost:3000/google-callback?token={jwt_token}')
 
 # Error handlers
 @app.errorhandler(404)

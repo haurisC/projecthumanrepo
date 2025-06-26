@@ -140,7 +140,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid
       TokenManager.clearToken();
-      window.location.href = '/login'; // Redirect to login
+      window.location.href = '/'; // Redirect to home page 
     }
     return Promise.reject(error);
   }
