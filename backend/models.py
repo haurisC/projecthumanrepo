@@ -22,12 +22,16 @@ class User(db.Model):
     is_verified = db.Column(db.Boolean, default=False)
     email_verification_token = db.Column(db.String(64), nullable=True)
     oauth_provider = db.Column(db.String(50), nullable=True)  # 'google', 'github', etc.
+    oauth_id = db.Column(db.String(100), nullable=True)  # Provider-specific ID
+    profile_picture = db.Column(db.String(255), nullable=True)  # Profile picture URL
 
-    def __init__(self, username, email, password=None, oauth_provider=None):
+    def __init__(self, username, email, password=None, oauth_provider=None, oauth_id=None, profile_picture=None):
         """Initialize user with validation"""
         self.username = self.validate_username(username)
         self.email = self.validate_email(email)
         self.oauth_provider = oauth_provider
+        self.oauth_id = oauth_id
+        self.profile_picture = profile_picture
         
         if password is not None:
             self.set_password(password)
@@ -80,7 +84,8 @@ class User(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_active': self.is_active,
             'is_verified': self.is_verified,
-            'oauth_provider': self.oauth_provider
+            'oauth_provider': self.oauth_provider,
+            'profile_picture': self.profile_picture
         }
         
         if include_sensitive:
@@ -103,6 +108,42 @@ class User(db.Model):
     def find_by_id(cls, user_id):
         """Find user by ID"""
         return db.session.get(cls, user_id)
+
+    @classmethod
+    def find_by_oauth(cls, provider, oauth_id):
+        """Find user by OAuth provider and ID"""
+        return cls.query.filter_by(oauth_provider=provider, oauth_id=oauth_id).first()
+    
+    @classmethod
+    def create_oauth_user(cls, email, name, oauth_provider, oauth_id, profile_picture=None):
+        """Create a new OAuth user"""
+        # Generate username from name or email
+        if name:
+            base_username = name.lower().replace(' ', '_').replace('-', '_')
+            # Remove non-alphanumeric characters except underscores
+            base_username = ''.join(c for c in base_username if c.isalnum() or c == '_')
+        else:
+            base_username = email.split('@')[0]
+        
+        # Ensure username meets validation requirements
+        if len(base_username) < 3:
+            base_username = f"user_{base_username}"
+        
+        username = base_username
+        
+        # Ensure username is unique
+        counter = 1
+        while cls.find_by_username(username):
+            username = f"{base_username}_{counter}"
+            counter += 1
+        
+        return cls(
+            username=username,
+            email=email,
+            oauth_provider=oauth_provider,
+            oauth_id=oauth_id,
+            profile_picture=profile_picture
+        )
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -193,7 +234,7 @@ class PasswordResetToken(db.Model):
         # Commit the deletions, return number of expired tokens
         db.session.commit()
         return len(expired_tokens)
-    
+
 
 
 

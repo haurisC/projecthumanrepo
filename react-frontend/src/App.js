@@ -50,7 +50,7 @@ function AppContent() {
       .catch(() => {
         setMessage('Unable to connect to backend');
       });
-  }, [apiClient]);
+  }, []); // Remove apiClient dependency to prevent infinite loops
 
   // Fetch protected data when authenticated
   useEffect(() => {
@@ -63,7 +63,7 @@ function AppContent() {
     } else {
       setProtectedData(null);
     }
-  }, [isAuthenticated, apiClient]);
+  }, [isAuthenticated]); // Remove apiClient dependency
 
   if (isLoading) {
     return (

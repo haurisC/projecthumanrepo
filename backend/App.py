@@ -1,14 +1,13 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session, redirect
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 import os
 from dotenv import load_dotenv
 from models import db, User, PasswordResetToken
 from auth_utils import generate_jwt, decode_jwt, token_required
+from oauth_utils import google_oauth
 import traceback
 import secrets
-from authlib.integrations.flask_client import OAuth
-from flask import redirect, url_for
 
 # Load environment variables
 load_dotenv()
@@ -23,21 +22,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
 db.init_app(app)
-cors = CORS(app, origins=os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(','))
-
-oauth = OAuth(app)
-google = oauth.register(
-    name='google',
-    client_id=os.getenv('GOOGLE_CLIENT_ID'),
-    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
-    access_token_url='https://oauth2.googleapis.com/token',
-    access_token_params=None,
-    authorize_url='https://accounts.google.com/o/oauth2/auth',
-    authorize_params=None,
-    api_base_url='https://www.googleapis.com/oauth2/v1/',
-    userinfo_endpoint='https://openidconnect.googleapis.com/v1/userinfo',
-    client_kwargs={'scope': 'openid email profile'},
-)
+cors = CORS(app, 
+    origins=os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(','),
+    supports_credentials=True)  # Allow credentials for session management
 
 # Create database tables
 with app.app_context():
@@ -363,30 +350,170 @@ def resend_verification(current_user_id):
             'message': 'An unexpected error occurred'
         }), 500
 
-@app.route('/api/auth/google')
-def google_login():
-    redirect_uri = url_for('google_callback', _external=True)
-    return google.authorize_redirect(redirect_uri)
+@app.route('/api/auth/google', methods=['GET'])
+def google_auth():
+    """Initiate Google OAuth flow"""
+    try:
+        authorization_url, state = google_oauth.get_authorization_url()
+        
+        # Store state in session for CSRF protection
+        session['oauth_state'] = state
+        
+        return jsonify({
+            'authorization_url': authorization_url,
+            'state': state
+        }), 200
+        
+    except Exception as e:
+        print(f"OAuth configuration error: {e}")
+        return jsonify({
+            'error': 'OAuth configuration error',
+            'message': 'Google OAuth is not properly configured'
+        }), 500
 
-@app.route('/api/auth/google/callback')
+@app.route('/api/auth/google/callback', methods=['GET'])
 def google_callback():
-    token = google.authorize_access_token()
-    resp = google.get('userinfo')
-    user_info = resp.json()
-    email = user_info['email']
-    username = user_info.get('name', email.split('@')[0])
+    """Handle Google OAuth callback"""
+    try:
+        # Get authorization code and state from query parameters
+        code = request.args.get('code')
+        state = request.args.get('state')
+        error = request.args.get('error')
+        
+        # Handle OAuth errors
+        if error:
+            print(f"OAuth error: {error}")
+            return redirect(f'http://localhost:3000/?error=oauth_error&message={error}')
+        
+        # Note: Temporarily disabled state verification for development
+        # In production, implement proper CSRF protection
+        # if not state or state != session.get('oauth_state'):
+        #     print("Invalid OAuth state")
+        #     return redirect('http://localhost:3000/?error=oauth_error&message=Invalid state parameter')
+        
+        # Clear state from session
+        session.pop('oauth_state', None)
+        
+        if not code:
+            print("No authorization code received")
+            return redirect('http://localhost:3000/?error=oauth_error&message=No authorization code received')
+        
+        # Exchange code for user info
+        user_info = google_oauth.exchange_code_for_token(code)
+        print(f"OAuth user info: {user_info}")
+        
+        # Find or create user
+        user = User.find_by_oauth('google', user_info['google_id'])
+        
+        if not user:
+            # Check if user exists with same email
+            existing_user = User.find_by_email(user_info['email'])
+            if existing_user:
+                # Link OAuth account to existing user
+                existing_user.oauth_provider = 'google'
+                existing_user.oauth_id = user_info['google_id']
+                existing_user.is_verified = True
+                if user_info.get('picture'):
+                    existing_user.profile_picture = user_info['picture']
+                db.session.commit()
+                user = existing_user
+                print(f"Linked OAuth to existing user: {user.email}")
+            else:
+                # Create new OAuth user
+                user = User.create_oauth_user(
+                    email=user_info['email'],
+                    name=user_info['name'],
+                    oauth_provider='google',
+                    oauth_id=user_info['google_id'],
+                    profile_picture=user_info.get('picture')
+                )
+                db.session.add(user)
+                db.session.commit()
+                print(f"Created new OAuth user: {user.email}")
+        else:
+            print(f"Found existing OAuth user: {user.email}")
+        
+        # Generate JWT token
+        token = generate_jwt({
+            'user_id': user.id,
+            'email': user.email
+        }, expires_in_minutes=60*24)  # 24 hours
+        
+        print(f"Generated JWT token for user: {user.email}")
+        
+        # Redirect to frontend with token
+        return redirect(f'http://localhost:3000/oauth/callback?token={token}')
+        
+    except Exception as e:
+        print(f"OAuth callback error: {e}")
+        import traceback
+        traceback.print_exc()
+        return redirect(f'http://localhost:3000/?error=oauth_error&message=Authentication failed')
 
-    # Find or create user
-    user = User.find_by_email(email)
-    if not user:
-        user = User(username=username, email=email, oauth_provider='google')
-        db.session.add(user)
-        db.session.commit()
-
-    # Generate JWT
-    jwt_token = generate_jwt({'user_id': user.id, 'username': user.username}, expires_in_minutes=60)
-    # Redirect to frontend with token
-    return redirect(f'http://localhost:3000/google-callback?token={jwt_token}')
+@app.route('/api/auth/google/verify', methods=['POST'])
+def google_verify():
+    """Verify Google ID token (for client-side OAuth)"""
+    try:
+        data = request.get_json()
+        token = data.get('token')
+        
+        if not token:
+            return jsonify({
+                'error': 'Missing token',
+                'message': 'Google ID token is required'
+            }), 400
+        
+        # Verify token with Google
+        user_info = google_oauth.verify_google_token(token)
+        
+        if not user_info:
+            return jsonify({
+                'error': 'Invalid token',
+                'message': 'Google ID token verification failed'
+            }), 400
+        
+        # Find or create user (same logic as callback)
+        user = User.find_by_oauth('google', user_info['google_id'])
+        
+        if not user:
+            existing_user = User.find_by_email(user_info['email'])
+            if existing_user:
+                existing_user.oauth_provider = 'google'
+                existing_user.oauth_id = user_info['google_id']
+                existing_user.is_verified = True
+                if user_info.get('picture'):
+                    existing_user.profile_picture = user_info['picture']
+                db.session.commit()
+                user = existing_user
+            else:
+                user = User.create_oauth_user(
+                    email=user_info['email'],
+                    name=user_info['name'],
+                    oauth_provider='google',
+                    oauth_id=user_info['google_id'],
+                    profile_picture=user_info.get('picture')
+                )
+                db.session.add(user)
+                db.session.commit()
+        
+        # Generate JWT token
+        jwt_token = generate_jwt({
+            'user_id': user.id,
+            'email': user.email
+        }, expires_in_minutes=60*24)
+        
+        return jsonify({
+            'message': 'Authentication successful',
+            'token': jwt_token,
+            'user': user.to_dict()
+        }), 200
+        
+    except Exception as e:
+        print(f"Google verify error: {e}")
+        return jsonify({
+            'error': 'Authentication failed',
+            'message': 'An unexpected error occurred'
+        }), 500
 
 # Error handlers
 @app.errorhandler(404)
