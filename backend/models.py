@@ -27,6 +27,15 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
     
+    #user.following - All users that the user follows
+    #user.followers - All users that follow the user
+    following = db.relationship(
+        'User',
+        secondary=follows,
+        primaryjoin=(follows.c.follower_id == id),
+        secondaryjoin=(follows.c.following_id == id),
+        backref=db.backref('followers', lazy='dynamic'),
+    )
 
     def __init__(self, username, email, password):
         """Initialize user with validation"""
