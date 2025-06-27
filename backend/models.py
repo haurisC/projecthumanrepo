@@ -3,6 +3,7 @@ from flask_bcrypt import Bcrypt
 from datetime import datetime, timezone
 import re
 
+
 db = SQLAlchemy()  # connection between python and database
 bcrypt = Bcrypt()  # used to hash and verify passwords
 
@@ -93,5 +94,30 @@ class User(db.Model):
         return f'<User {self.username}>'
     
 
+class Profile(db.Model):
+    """Profile model with fields for display_name, bio, profile_picture_url, cover_photo_url."""
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
+    display_name = db.Column(db.String(120), nullable=True)
+    bio = db.Column(db.Text, nullable=True)
+    profile_picture_url = db.Column(db.String(300), nullable=True)
+    cover_photo_url = db.Column(db.String(300), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+    
+
+    def to_dict(self):
+        """Convert profile to dictionary for JSON responses"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'display_name': self.display_name,
+            'bio': self.bio,
+            'profile_picture_url': self.profile_picture_url,
+            'cover_photo_url': self.cover_photo_url,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+    def __repr__(self):
+        return f"<Profile of User {self.user_id}>"
