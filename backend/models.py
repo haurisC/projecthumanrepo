@@ -10,13 +10,6 @@ bcrypt = Bcrypt()  # used to hash and verify passwords
 # Email validation regex
 EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 
-# Follow Relationship Many to Many 
-# Implemented using an association table
-follows = db.Table(
-    'follows',
-    db.Column('follower_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('following_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
-)
 class User(db.Model):
     """User model with enhanced validation and security"""
     
@@ -26,16 +19,6 @@ class User(db.Model):
     password_hash = db.Column(db.String(150), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
-    
-    #user.following - All users that the user follows
-    #user.followers - All users that follow the user
-    following = db.relationship(
-        'User',
-        secondary=follows,
-        primaryjoin=(follows.c.follower_id == id),
-        secondaryjoin=(follows.c.following_id == id),
-        backref=db.backref('followers', lazy='dynamic'),
-    )
 
     def __init__(self, username, email, password):
         """Initialize user with validation"""
@@ -111,7 +94,6 @@ class User(db.Model):
         return f'<User {self.username}>'
     
 
-# Profile model for user profiles
 class Profile(db.Model):
     """Profile model with fields for display_name, bio, profile_picture_url, cover_photo_url."""
     id = db.Column(db.Integer, primary_key = True)
@@ -121,6 +103,7 @@ class Profile(db.Model):
     profile_picture_url = db.Column(db.String(300), nullable=True)
     cover_photo_url = db.Column(db.String(300), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
 
 
     def to_dict(self):
@@ -134,32 +117,7 @@ class Profile(db.Model):
             'cover_photo_url': self.cover_photo_url,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
-
+    
+    
     def __repr__(self):
         return f"<Profile of User {self.user_id}>"
-    
-# Post Model for user posts
-class Post(db.Model):
-    """Post model with fields for title, content, image_url, created_at, and user_id."""
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    content_photo_url = db.Column(db.String(300), nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-
-    def to_dict(self):
-        """Convert post to dictionary for JSON responses"""
-        return {
-            'id': self.id,
-            'user_id': self.user_id,
-            'title': self.title,
-            'content': self.content,
-            'content_photo_url': self.content_photo_url,
-            'created_at': self.created_at.isoformat() if self.created_at else None
-        }
-
-    def __repr__(self):
-        return f"<Post {self.title} by User {self.user_id}>"
-    
-#
