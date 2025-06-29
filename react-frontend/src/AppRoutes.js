@@ -5,7 +5,7 @@ import Dashboard from './components/Dashboard';
 import { useAuth } from './contexts/AuthContext';
 import VerifyEmail from "./components/VerifyEmail";
 import OAuthCallback from "./components/OAuthCallback";
-
+import ProfilePage from './components/ProfilePage';
 
 
 const AppRoutes = ({
@@ -31,6 +31,14 @@ const AppRoutes = ({
             : <Navigate to="/" replace />
         }
       />
+      <Route
+        path="/profile/:userId"
+        element={
+          isAuthenticated
+            ? <ProfilePage />
+            : <Navigate to="/" replace />
+        }
+/>
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/oauth/callback" element={<OAuthCallback />} />
       {/* Add more routes here as needed */}
