@@ -8,6 +8,7 @@ from auth_utils import generate_jwt, decode_jwt, token_required
 from oauth_utils import google_oauth
 import traceback
 import secrets
+from models import Follow
 
 # Load environment variables
 load_dotenv()
@@ -514,6 +515,37 @@ def google_verify():
             'error': 'Authentication failed',
             'message': 'An unexpected error occurred'
         }), 500
+    
+@app.route('/api/users/<int:user_id>/follow', methods=['POST'])
+@token_required
+def follow_user(current_user_id, user_id):
+    """Follow a user"""
+    if current_user_id == user_id:
+        return jsonify({'error': 'You cannot follow yourself.'}), 400
+
+    # search if followed or not
+    existing = Follow.query.filter_by(follower_id=current_user_id, followee_id=user_id).first()
+    if existing:
+        return jsonify({'message': 'Already following'}), 200
+
+    # add record of following
+    new_follow = Follow(follower_id=current_user_id, followee_id=user_id)
+    db.session.add(new_follow)
+    db.session.commit()
+    return jsonify({'message': f'Now following user {user_id}'}), 201
+
+
+@app.route('/api/users/<int:user_id>/unfollow', methods=['DELETE'])
+@token_required
+def unfollow_user(current_user_id, user_id):
+    """Unfollow a user"""
+    follow = Follow.query.filter_by(follower_id=current_user_id, followee_id=user_id).first()
+    if not follow:
+        return jsonify({'message': 'Not following this user'}), 404
+
+    db.session.delete(follow)
+    db.session.commit()
+    return jsonify({'message': f'Unfollowed user {user_id}'}), 200
 
 # Error handlers
 @app.errorhandler(404)
@@ -530,3 +562,4 @@ if __name__ == '__main__':
         port=int(os.getenv('PORT', 5000)),
         debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     )
+

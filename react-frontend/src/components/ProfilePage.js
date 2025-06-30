@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 const ProfilePage = () => {
   const { userId } = useParams();
+  const [isFollowing, setIsFollowing] = useState(false);// assume unfollowed
+  const handleFollowToggle = () => {
+    setIsFollowing(prev => !prev);
+  };
 
   return (
     <div className="p-6">
@@ -17,6 +21,17 @@ const ProfilePage = () => {
         />
         <h2 className="text-xl font-semibold">Display Name Placeholder</h2>
         <p className="text-gray-600">Bio Placeholder</p>
+
+        {/* Follow/Unfollow button */}
+        <button
+          onClick={handleFollowToggle}
+          className={`px-4 py-2 rounded ${
+            isFollowing ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
+          }`}
+        >
+          {isFollowing ? 'Unfollow' : 'Follow'}
+        </button>
+
         <div className="flex gap-4">
           <span>Followers: --</span>
           <span>Following: --</span>

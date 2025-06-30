@@ -264,3 +264,15 @@ class Profile(db.Model):
     
     def __repr__(self):
         return f"<Profile of User {self.user_id}>"
+
+class Follow(db.Model):
+    """Model representing a follow relationship between users."""
+    id = db.Column(db.Integer, primary_key=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    followee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (db.UniqueConstraint('follower_id', 'followee_id', name='unique_follow'),)
+
+    def __repr__(self):
+        return f"<Follow follower={self.follower_id} followee={self.followee_id}>"
