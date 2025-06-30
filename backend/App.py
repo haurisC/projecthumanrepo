@@ -35,7 +35,7 @@ with app.app_context():
 @app.route('/')
 def home():
     return jsonify({
-        'message': 'ProjectHuman API',
+        'message': 'Uplifty API',
         'status': 'running',
         'version': '1.0.0'
     })

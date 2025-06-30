@@ -71,7 +71,7 @@ function AppContent() {
         <header className={appHeaderClass}>
           <div className={loadingSpinnerClass}>
             <h2 className={loadingTitleClass}>Loading...</h2>
-            <p>Initializing ProjectHuman...</p>
+            <p>Initializing Uplifty...</p>
           </div>
         </header>
       </div>
@@ -107,7 +107,7 @@ function AppContent() {
     <div className={appClass}>
       <header className={appHeaderClass}>
         <div className={headerContentClass}>
-          <h1 className={headerTitleClass}>ProjectHuman</h1>
+          <h1 className={headerTitleClass}>Uplifty</h1>
           <p className={subtitleClass}>{message}</p>
           {isAuthenticated && (
             <div className={userHeaderClass}>

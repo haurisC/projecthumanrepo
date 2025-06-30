@@ -65,24 +65,32 @@ const Dashboard = ({
       <h3 className={actionsSectionH3Class}>Quick Actions</h3>
       <div className={actionButtonsClass}>
         <button
-          className={actionBtnPrimaryClass}
-          onClick={() => window.location.reload()}
+            className={actionBtnPrimaryClass}
+            onClick={() => window.location.reload()}
         >
           Refresh Data
         </button>
         <button
-          className={actionBtnSecondaryClass}
-          onClick={() => {
-            apiClient.get('/api/auth/me')
-              .then(() => {
-                alert('Profile synced successfully!');
-              })
-              .catch(() => {
-                alert('Failed to sync profile');
-              });
-          }}
+            className={actionBtnSecondaryClass}
+            onClick={() => {
+              apiClient.get('/api/auth/me')
+                  .then(() => {
+                    alert('Profile synced successfully!');
+                  })
+                  .catch(() => {
+                    alert('Failed to sync profile');
+                  });
+            }}
         >
           Sync Profile
+        </button>
+        <button
+            className={actionBtnSecondaryClass}
+            onClick={() => {
+              window.location.href = `/profile/${user?.id}`;  // this should go to the user's own user ID profile page
+            }}
+        >
+          Go to Profile
         </button>
       </div>
     </div>

@@ -178,8 +178,8 @@ const Login = () => {
       </h2>
       <p className="text-gray-600">
         {isLoginMode
-          ? 'Sign in to your ProjectHuman account'
-          : 'Join ProjectHuman today'
+          ? 'Sign in to your Uplifty account'
+          : 'Join Uplifty today'
         }
       </p>
     </div>
