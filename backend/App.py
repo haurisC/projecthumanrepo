@@ -11,6 +11,9 @@ import secrets
 from models import Follow
 from dashboard_routes import dashboard_bp
 app.register_blueprint(dashboard_bp)
+from flask_migrate import Migrate
+from models import db
+migrate = Migrate(app,db)
 
 
 # Load environment variables
