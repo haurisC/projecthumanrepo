@@ -9,6 +9,9 @@ from oauth_utils import google_oauth
 import traceback
 import secrets
 from models import Follow
+from dashboard_routes import dashboard_bp
+app.register_blueprint(dashboard_bp)
+
 
 # Load environment variables
 load_dotenv()
