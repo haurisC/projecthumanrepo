@@ -19,8 +19,8 @@ class User(db.Model):
     password_hash = db.Column(db.String(150), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
-    is_verified = db.Column(db.Boolean, default=False)
-    email_verification_token = db.Column(db.String(64), nullable=True)
+    is_verified = db.Column(db.Boolean, default=False) # This is the database column for email verification.
+    email_verification_token = db.Column(db.String(64), nullable=True) # This is the token database storage 
 
     def __init__(self, username, email, password):
         """Initialize user with validation"""
@@ -94,7 +94,11 @@ class User(db.Model):
 
     def __repr__(self):
         return f'<User {self.username}>'
-
+    
+    def generate_email_verification_token(self):
+        import secrets
+        self.email_verification_token = secrets.token_urlsafe(32)
+        return self.email_verification_token
 
 class PasswordResetToken(db.Model):
     """Model for resetting password. Stores temporary tokens that allow users to reset their passwords
