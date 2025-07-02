@@ -138,9 +138,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
+      // Token expired or invalid - clear the token but don't redirect
+      // Let the AuthContext handle the redirect through React Router
       TokenManager.clearToken();
-      window.location.href = '/login'; // Redirect to login
+      console.log('Token expired - clearing authentication');
     }
     return Promise.reject(error);
   }
@@ -152,6 +153,8 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [isLoginInProgress, setIsLoginInProgress] = useState(false); // Add login guard
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -159,6 +162,20 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const initializeAuth = async () => {
+    if (isInitializing) {
+      console.log('[AuthContext] Already initializing, skipping...');
+      return;
+    }
+
+    // If already authenticated, don't re-initialize
+    if (isAuthenticated) {
+      console.log('[AuthContext] Already authenticated, skipping initialization...');
+      setIsLoading(false);
+      return;
+    }
+    
+    console.log('[AuthContext] Initializing auth...');
+    setIsInitializing(true);
     setIsLoading(true);
     setError(null);
 
@@ -169,25 +186,29 @@ export const AuthProvider = ({ children }) => {
       if (token && TokenManager.isTokenValid(token) && storedUser) {
         // Token exists and is valid, verify with backend
         try {
+          console.log('[AuthContext] Verifying token with backend...');
           const response = await apiClient.get('/api/auth/me');
           const userData = response.data.user;
           
           setUser(userData);
           setIsAuthenticated(true);
           TokenManager.storeUser(userData); // Update stored user data
+          console.log('[AuthContext] Auth initialized successfully');
         } catch (error) {
-          console.error('Failed to verify token with backend:', error);
+          console.error('[AuthContext] Failed to verify token with backend:', error);
           clearAuth();
         }
       } else {
         // No valid token, clear any stale data
+        console.log('[AuthContext] No valid token found, clearing auth');
         clearAuth();
       }
     } catch (error) {
-      console.error('Auth initialization error:', error);
+      console.error('[AuthContext] Auth initialization error:', error);
       clearAuth();
     } finally {
       setIsLoading(false);
+      setIsInitializing(false);
     }
   };
 
@@ -291,6 +312,53 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // OAuth login function (for handling tokens from OAuth callbacks)
+  const loginWithToken = async (token) => {
+    if (isLoginInProgress) {
+      console.log('[AuthContext] Login already in progress, skipping...');
+      return { success: false, error: 'Login already in progress' };
+    }
+
+    console.log('[AuthContext] loginWithToken called');
+    setIsLoginInProgress(true);
+    setIsLoading(true);
+    setError(null); // Clear any previous errors
+
+    try {
+      if (!token) {
+        throw new Error('No token provided');
+      }
+
+      // Store the token
+      TokenManager.storeToken(token);
+      console.log('[AuthContext] Token stored, verifying with backend...');
+
+      // Verify token and get user data
+      const response = await apiClient.get('/api/auth/me');
+      const userData = response.data.user;
+
+      if (userData) {
+        // Store user data and update state
+        TokenManager.storeUser(userData);
+        setUser(userData);
+        setIsAuthenticated(true);
+        console.log('[AuthContext] OAuth login successful');
+        return { success: true, user: userData };
+      } else {
+        throw new Error('Failed to get user data');
+      }
+    } catch (error) {
+      console.error('OAuth login failed:', error);
+      const errorMessage = error.response?.data?.message || 'Authentication failed';
+      setError(errorMessage);
+      clearAuth();
+      return { success: false, error: errorMessage };
+    } finally {
+      setIsLoading(false);
+      setIsLoginInProgress(false);
+    }
+  };
+
   // Auto-logout when token expires
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -330,6 +398,7 @@ export const AuthProvider = ({ children }) => {
 
     // Actions
     login,
+    loginWithToken,
     register,
     logout,
     refreshUser,

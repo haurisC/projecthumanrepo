@@ -181,7 +181,6 @@ POST /api/auth/reset-password - Reset password using valid token
 - Password confirmation matching
 
 #### 2.3 Logout Component (`components/Logout.js`)
-
 **Features:**
 - Clean logout functionality
 - User info display
@@ -195,6 +194,21 @@ POST /api/auth/reset-password - Reset password using valid token
 - Protected content display
 - User dashboard
 - API integration examples
+
+#### 2.5 Profile Page Component (`components/ProfilePage.js`)
+
+**Features:**
+- Static user profile page
+- Route: `/profile/:userId`
+- Protected by authentication (`isAuthenticated`)
+- Uses `useParams()` to get user ID from URL
+- Displays placeholder sections:
+  - Cover photo
+  - Profile picture (avatar)
+  - Display name
+  - Bio
+  - Followers and following count
+- Styled using Tailwind CSS
 
 ## Session Management
 
@@ -425,6 +439,7 @@ python -m pytest test_auth.py -v
 - Context provider tests
 - Authentication flow tests
 - Error handling tests
+
 
 ## Conclusion
 

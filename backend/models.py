@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 import re
 import secrets
 
+
 db = SQLAlchemy()  # connection between python and database
 bcrypt = Bcrypt()  # used to hash and verify passwords
 
@@ -16,18 +17,27 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)  
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(150), nullable=False)
+    password_hash = db.Column(db.String(150), nullable=True)  # Allow null for OAuth users
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
-    is_verified = db.Column(db.Boolean, default=False) # This is the database column for email verification.
-    email_verification_token = db.Column(db.String(64), nullable=True) # This is the token database storage 
+    is_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(64), nullable=True)
 
-    def __init__(self, username, email, password):
+    def __init__(self, username, email, password=None, oauth_provider=None, oauth_id=None, profile_picture=None):
         """Initialize user with validation"""
         self.username = self.validate_username(username)
         self.email = self.validate_email(email)
-        self.set_password(password)
+        self.oauth_provider = oauth_provider
+        self.oauth_id = oauth_id
+        self.profile_picture = profile_picture
+        
+        if password is not None:
+            self.set_password(password)
+        elif oauth_provider is None:
+            raise ValueError("Password is required for non-OAuth users")
+        
         self.is_active = True  # Set default active status
+        self.is_verified = True if oauth_provider else False  # OAuth users are pre-verified
 
     @staticmethod
     def validate_username(username):
@@ -59,6 +69,8 @@ class User(db.Model):
     
     def check_password(self, password):
         """Verify password against hash"""
+        if not self.password_hash:
+            return False  # OAuth users don't have passwords
         return bcrypt.check_password_hash(self.password_hash, password)
     
     def to_dict(self, include_sensitive=False):
@@ -68,7 +80,10 @@ class User(db.Model):
             'username': self.username,
             'email': self.email,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'is_active': self.is_active
+            'is_active': self.is_active,
+            'is_verified': self.is_verified,
+            'oauth_provider': self.oauth_provider,
+            'profile_picture': self.profile_picture
         }
         
         if include_sensitive:
@@ -91,6 +106,42 @@ class User(db.Model):
     def find_by_id(cls, user_id):
         """Find user by ID"""
         return db.session.get(cls, user_id)
+
+    @classmethod
+    def find_by_oauth(cls, provider, oauth_id):
+        """Find user by OAuth provider and ID"""
+        return cls.query.filter_by(oauth_provider=provider, oauth_id=oauth_id).first()
+    
+    @classmethod
+    def create_oauth_user(cls, email, name, oauth_provider, oauth_id, profile_picture=None):
+        """Create a new OAuth user"""
+        # Generate username from name or email
+        if name:
+            base_username = name.lower().replace(' ', '_').replace('-', '_')
+            # Remove non-alphanumeric characters except underscores
+            base_username = ''.join(c for c in base_username if c.isalnum() or c == '_')
+        else:
+            base_username = email.split('@')[0]
+        
+        # Ensure username meets validation requirements
+        if len(base_username) < 3:
+            base_username = f"user_{base_username}"
+        
+        username = base_username
+        
+        # Ensure username is unique
+        counter = 1
+        while cls.find_by_username(username):
+            username = f"{base_username}_{counter}"
+            counter += 1
+        
+        return cls(
+            username=username,
+            email=email,
+            oauth_provider=oauth_provider,
+            oauth_id=oauth_id,
+            profile_picture=profile_picture
+        )
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -185,7 +236,44 @@ class PasswordResetToken(db.Model):
         # Commit the deletions, return number of expired tokens
         db.session.commit()
         return len(expired_tokens)
+
+
+class Profile(db.Model):
+    """Profile model with fields for display_name, bio, profile_picture_url, cover_photo_url."""
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
+    display_name = db.Column(db.String(120), nullable=True)
+    bio = db.Column(db.Text, nullable=True)
+    profile_picture_url = db.Column(db.String(300), nullable=True)
+    cover_photo_url = db.Column(db.String(300), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+
+    def to_dict(self):
+        """Convert profile to dictionary for JSON responses"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'display_name': self.display_name,
+            'bio': self.bio,
+            'profile_picture_url': self.profile_picture_url,
+            'cover_photo_url': self.cover_photo_url,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
     
+    
+    def __repr__(self):
+        return f"<Profile of User {self.user_id}>"
 
+class Follow(db.Model):
+    """Model representing a follow relationship between users."""
+    id = db.Column(db.Integer, primary_key=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    followee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
+    __table_args__ = (db.UniqueConstraint('follower_id', 'followee_id', name='unique_follow'),)
 
+    def __repr__(self):
+        return f"<Follow follower={self.follower_id} followee={self.followee_id}>"
