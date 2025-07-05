@@ -22,6 +22,9 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_verified = db.Column(db.Boolean, default=False)
     email_verification_token = db.Column(db.String(64), nullable=True)
+    oauth_provider = db.Column(db.String(50), nullable=True)  # 'google', 'github', etc.
+    oauth_id = db.Column(db.String(100), nullable=True)  # Provider-specific ID
+    profile_picture = db.Column(db.String(255), nullable=True)  # Profile picture URL
 
     def __init__(self, username, email, password=None, oauth_provider=None, oauth_id=None, profile_picture=None):
         """Initialize user with validation"""
@@ -277,3 +280,27 @@ class Follow(db.Model):
 
     def __repr__(self):
         return f"<Follow follower={self.follower_id} followee={self.followee_id}>"
+
+class WaitlistEntry(db.Model):
+    __tablename__ = 'waitlist_entries'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    referred_by = db.Column(db.String(120))
+    referred_emails = db.Column(db.Text)  # Store as comma-separated string
+
+    def __init__(self, name, email, referred_by, referred_emails):
+        self.name = name
+        self.email = email
+        self.referred_by = referred_by
+        # Store emails as comma-separated string
+        self.referred_emails = ','.join([e for e in referred_emails if e.strip()])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "referred_by": self.referred_by,
+            "referred_emails": self.referred_emails.split(',') if self.referred_emails else [],
+        }

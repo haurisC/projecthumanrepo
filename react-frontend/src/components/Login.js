@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const { login, register, isLoading, error, clearError } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -324,8 +326,7 @@ const Login = () => {
           )}
         </button>
       </div>
-
-      <div className="text-center mt-5">
+     <div className="text-center mt-5">
         <p className="text-gray-600">
           {isLoginMode ? "Don't have an account? " : "Already have an account? "}
           <button
@@ -348,7 +349,16 @@ const Login = () => {
           </div>
         </div>
       )}
-    </div>
+    <div className="mt-7 flex justify-center">
+    <button
+    className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded"
+    type="button"
+    onClick={() => navigate('/waitlist')}
+    >
+    Join Waitlist
+    </button>
+   </div>
+  </div>
   );
 };
 

@@ -13,6 +13,8 @@ from dashboard_routes import dashboard_bp
 app.register_blueprint(dashboard_bp)
 from flask_migrate import Migrate
 from models import db
+from models import WaitlistEntry
+
 migrate = Migrate(app,db)
 
 
@@ -552,6 +554,32 @@ def unfollow_user(current_user_id, user_id):
     db.session.delete(follow)
     db.session.commit()
     return jsonify({'message': f'Unfollowed user {user_id}'}), 200
+
+@app.route('/api/waitlist', methods=['POST'])
+def join_waitlist():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    name = data.get('name', '').strip()
+    email = data.get('email', '').strip()
+    referred_by = data.get('referredBy', '').strip()
+    referred_emails = data.get('referredEmails', [])
+
+    if not name or not email:
+        return jsonify({'error': 'Name and email are required.'}), 400
+
+    entry = WaitlistEntry(
+        name=name,
+        email=email,
+        referred_by=referred_by,
+        referred_emails=referred_emails or []
+    )
+
+    db.session.add(entry)
+    db.session.commit()
+
+    return jsonify({'message': 'Waitlist entry created.'}), 201
 
 # Error handlers
 @app.errorhandler(404)

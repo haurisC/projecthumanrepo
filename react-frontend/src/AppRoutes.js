@@ -6,6 +6,7 @@ import { useAuth } from './contexts/AuthContext';
 import VerifyEmail from "./components/VerifyEmail";
 import OAuthCallback from "./components/OAuthCallback";
 import ProfilePage from './components/ProfilePage';
+import Waitlist from './components/Waitlist';
 
 
 const AppRoutes = ({
@@ -41,6 +42,7 @@ const AppRoutes = ({
 />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/oauth/callback" element={<OAuthCallback />} />
+      <Route path="/waitlist" element={<Waitlist />} />
       {/* Add more routes here as needed */}
     </Routes>
     
