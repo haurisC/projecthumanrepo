@@ -10,12 +10,8 @@ import traceback
 import secrets
 from models import Follow
 from dashboard_routes import dashboard_bp
-app.register_blueprint(dashboard_bp)
 from flask_migrate import Migrate
 from models import db
-from models import WaitlistEntry
-
-migrate = Migrate(app,db)
 
 
 # Load environment variables
@@ -24,10 +20,14 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 
+app.register_blueprint(dashboard_bp)
+
 # Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///projecthuman.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+migrate = Migrate(app,db)
 
 # Initialize extensions
 db.init_app(app)
