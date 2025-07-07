@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
-from models import User
-from auth_utils import token_required
+from backend.models import User
+from backend.auth_utils import token_required
 
 
 dashboard_bp = Blueprint("dashboard", __name__)
