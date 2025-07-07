@@ -3,16 +3,14 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 import os
 from dotenv import load_dotenv
-from models import db, User, PasswordResetToken
 from auth_utils import generate_jwt, decode_jwt, token_required
 from oauth_utils import google_oauth
 import traceback
 import secrets
-from models import Follow
 from dashboard_routes import dashboard_bp
 from flask_migrate import Migrate
-from models import db
-
+from backend.models import db, User, PasswordResetToken
+from backend.models import Follow
 
 # Load environment variables
 load_dotenv()
