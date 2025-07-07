@@ -42,7 +42,7 @@ const AppRoutes = ({
 />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/oauth/callback" element={<OAuthCallback />} />
-      <Route path="/Waitlist" element={<Waitlist />} />
+      <Route path="/waitlist" element={<Waitlist />} />
       {/* Add more routes here as needed */}
     </Routes>
     
